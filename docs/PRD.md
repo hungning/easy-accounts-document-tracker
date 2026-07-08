@@ -1,30 +1,30 @@
 # PRD — Easy Accounts Document Tracker
 
 ## Problem
-Accounting teams chase missing client documents across Excel, WhatsApp, and email with no single source of truth. It is hard to see who owes what, by when, and who is responsible.
+Accounting teams juggle missing client documents across multiple services (accounting, GST, payroll, tax, audit, corporate secretarial) using Excel, WhatsApp, and email — leading to missed deadlines, unclear ownership, and wasted time composing follow-up messages manually.
 
 ## Target User
-Accountants and their team members at a small-to-mid accounting firm, using this internally every workday.
+Accounting firm staff (accountants, managers) tracking document requests from multiple clients day-to-day.
 
 ## Core Objects
-- **Client** — name, contact, financial year-end, service type, person in charge
-- **Document Request** — missing documents, deadline, follow-up date, status, client reply, internal notes
-- **Reminder Message** — generated plain-text message ready to copy into WhatsApp or email
-- **Activity Log** — who changed what and when
+- **Client** — name, financial year-end, service type, person in charge, internal notes
+- **Document Request** — document name, deadline, status, follow-up date, client reply
+- **Reminder Message** — generated message text ready to copy into WhatsApp or email
+- **Team Member** — name, email (for assigning person in charge)
 
 ## MVP Must-Haves (v1)
-- [ ] Add / edit / delete a client
-- [ ] Add a document request with missing documents, deadline, service type, person in charge
-- [ ] Set and update status: Pending, Waiting for Client, Partially Received, Received, In Review, Completed
-- [ ] Dashboard listing all clients with open requests, sorted by deadline ascending
-- [ ] Overdue rows visually highlighted
-- [ ] Generate a plain-text follow-up message (client name, missing docs, deadline, polite wording) and copy to clipboard
-- [ ] All data persists to database; survives page refresh
+- [ ] Add and edit a client with FYE, service type, and person in charge
+- [ ] Add missing document requests to a client with a deadline
+- [ ] Update document request status (Pending / Waiting for Client / Partially Received / Received / In Review / Completed)
+- [ ] Dashboard listing all clients with outstanding documents, sorted by nearest deadline
+- [ ] Deadline urgency indicator (overdue, due soon, on track)
+- [ ] Generate a reminder message (client name + missing docs + deadline + polite wording) with one-click copy
+- [ ] App renders with demo data without requiring login
 
 ## Non-Goals (v1)
-No automatic sending (WhatsApp or email), no Xero integration, no AI document reading, no payments, no complex user permissions, no public client portal.
+No auto email/WhatsApp sending, no Xero integration, no file uploads, no complex permissions, no AI document reading, no payment features.
 
 ## Definition of Done
-**Pass:** A team member opens the app, adds a new client "ABC Sdn Bhd" with two missing documents and a deadline of next Friday, sets status to "Pending", clicks Generate Reminder, reads a correct plain-text message, copies it, and sees the client appear at the top of the dashboard sorted by deadline — all without logging in, and with data still present after a hard refresh.
+**Pass:** A staff member opens the app, adds "Maple Trading" with two missing documents and a deadline of next Friday, assigns it to themselves, updates one document to "Partially Received", generates a reminder message, and copies it to clipboard — all changes persist after a page refresh, the dashboard shows the client sorted by deadline, and no step requires a login.
 
-**Fail:** Any button does not persist to the database, the dashboard shows only seed data, or the generated message is blank.
+**Fail:** Any button does nothing, any save does not survive a refresh, or the reminder message does not include the correct document names and deadline.

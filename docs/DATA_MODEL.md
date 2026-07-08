@@ -1,56 +1,52 @@
 # Data Model
 
+## team_members
+| Field | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| user_id | uuid nullable | owner scope (post lock-down) |
+| name | text not null | |
+| email | text | |
+| created_at | timestamptz | |
+
 ## clients
 | Field | Type | Notes |
 |---|---|---|
-| id | uuid PK | gen_random_uuid() |
-| user_id | uuid nullable | owner scope, added at lock-down |
-| created_at | timestamptz | default now() |
-| name | text | required |
-| contact_name | text | |
-| contact_whatsapp | text | |
-| contact_email | text | |
-| financial_year_end | text | e.g. "31 Dec" |
-| service_type | text | Accounting / GST / Payroll / Tax / Audit / CorpSec |
-| person_in_charge | text | |
-| notes | text | |
+| id | uuid PK | |
+| user_id | uuid nullable | |
+| name | text not null | |
+| financial_year_end | date | |
+| service_type | text not null | Accounting, GST, Payroll, Tax, Audit, CorpSec |
+| person_in_charge | text | free text, joins to team_members by name |
+| internal_notes | text | |
+| created_at | timestamptz | |
 
 ## document_requests
 | Field | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
 | user_id | uuid nullable | |
-| created_at | timestamptz | |
-| client_id | uuid FK → clients.id | cascade delete |
-| service_type | text | may differ from client default |
-| financial_year | text | e.g. "FY2023" |
-| missing_documents | text | required; newline-separated list |
+| client_id | uuid FK → clients | cascades on delete |
+| document_name | text not null | |
 | deadline | date | |
+| status | text not null | enum: Pending, Waiting for Client, Partially Received, Received, In Review, Completed |
 | follow_up_date | date | |
-| person_in_charge | text | |
-| status | text | default 'Pending'; one of six allowed values |
 | client_reply | text | |
-| internal_notes | text | |
-| reminder_message | text | **AI field** |
-| reminder_message_source | text | e.g. 'template' or 'ai-generated' |
-| reminder_message_confidence | numeric | 0.0–1.0 |
-| reminder_message_review_status | text | default 'unreviewed' |
+| created_at | timestamptz | |
 
-## activity_logs
+## reminder_messages
 | Field | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
 | user_id | uuid nullable | |
+| client_id | uuid FK → clients | |
+| message_text | text not null | AI field: also stores message_text_source, message_text_confidence, message_text_review_status |
+| message_text_source | text | e.g. `rule_template` or `ai_draft` |
+| message_text_confidence | numeric | 1.0 for rule-based; <1.0 for AI-drafted |
+| message_text_review_status | text | default `unreviewed`; set to `approved` before copy |
+| generated_at | timestamptz | |
 | created_at | timestamptz | |
-| entity_type | text | 'client' or 'document_request' |
-| entity_id | uuid | |
-| action | text | e.g. 'status_changed', 'request_created' |
-| old_value | text | |
-| new_value | text | |
-| actor_label | text | display name or email |
 
 ## RLS
-All tables: v1 open policies (select + all using true). Replaced with `auth.uid() = user_id` at lock-down sprint.
-
-## Relationships
-`document_requests.client_id` → `clients.id` (many requests per client).
+- All tables: v1 open read + write policies (any visitor).
+- Lock-down sprint: replace with `auth.uid() = user_id` owner policies.

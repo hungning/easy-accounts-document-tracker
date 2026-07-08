@@ -1,27 +1,26 @@
 # Architecture
 
 ## Stack
-- **Frontend:** Next.js 14 (App Router) + Tailwind CSS
-- **Database + Auth:** Supabase (Postgres, RLS, Auth)
-- **Hosting:** Vercel
-- **Clipboard API:** Browser-native
+- **Frontend:** Next.js (App Router) — hosted on Vercel
+- **Database + Auth:** Supabase (Postgres + RLS + Auth, added later)
+- **Styling:** Tailwind CSS
 
 ## What to Build Now vs Later
-**Now:** Client CRUD, document request CRUD, status updates, deadline-sorted dashboard, reminder message generator, open RLS (demo-first).
-**Later:** Auth + per-user RLS, follow-up date alerts, CSV export, recurring templates, bulk actions.
+**Now:** Client CRUD, document request CRUD, status updates, deadline dashboard, reminder message generator — all without login.
+**Later:** Login + per-user data isolation, follow-up reminders, filters, audit trail.
 
 ## Key User Action — Step by Step
-1. User opens dashboard — app fetches `document_requests` joined with `clients`, ordered by `deadline ASC`, status ≠ Completed.
-2. User clicks "Add Request" for a client — form captures client, missing documents, deadline, PIC, service type.
-3. On submit — row inserted into `document_requests`; dashboard refetches and re-renders.
-4. User clicks "Generate Reminder" — app reads `client.name`, `document_request.missing_documents`, `document_request.deadline`, renders a plain-text message template, stores draft in `reminder_message` field with `source = 'template'`, `confidence = 1.0`, `review_status = 'unreviewed'`.
-5. User clicks "Copy" — `navigator.clipboard.writeText()` fires; user pastes into WhatsApp or email.
-6. User updates status to "Waiting for Client" — single field update persists; dashboard badge refreshes immediately.
+1. Staff opens dashboard → Supabase query returns all clients with open document requests, ordered by earliest deadline.
+2. Staff clicks a client → client detail page loads all document requests for that client.
+3. Staff adds a missing document → form submits to `document_requests` table, row inserted, list re-renders.
+4. Staff changes status → dropdown triggers update to `document_requests.status`, UI reflects new value immediately.
+5. Staff clicks "Generate Reminder" → server-side template fills in client name, document list, and deadline → message text rendered in a textarea.
+6. Staff clicks "Copy" → clipboard API copies message text; staff pastes into WhatsApp or email.
 
 ## Layer Plan
-1. **Data layer first** — tables, constraints, RLS policies, seed rows.
-2. **App logic** — CRUD forms, status machine, deadline sort, message template renderer.
-3. **Smart features on top** — AI-assisted message refinement, overdue scoring, suggested follow-up dates (these are additive; removing them leaves the core intact).
+1. **Data layer first** — tables, constraints, seed data, open RLS policies.
+2. **App logic** — CRUD forms, status machine, deadline sorting, reminder template engine.
+3. **Smart features later** — AI-drafted message tone improvements, urgency scoring (rule-based first, then model-assisted).
 
-## Core Without AI
-The reminder message is generated from a deterministic string template. The dashboard ranking is pure SQL `ORDER BY deadline ASC`. The app is fully functional with zero AI calls.
+## Core Runs Without AI
+The reminder message generator uses a deterministic string template. No AI call is required for the app to function end-to-end.

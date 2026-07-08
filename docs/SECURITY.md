@@ -1,22 +1,25 @@
 # Security
 
-## Secret Handling
-- Supabase URL and anon key are exposed to the browser (public by design); service role key is **never** in frontend code or committed to the repo.
-- All secrets loaded via environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`); service role key in server-only env var, never prefixed `NEXT_PUBLIC_`.
+## Secrets
+- Supabase URL and anon key stored in `.env.local` / Vercel environment variables only.
+- Service role key never exposed to the browser or committed to the repo.
+- All DB access from the frontend uses the anon key + RLS — the service role key is used only in server-side migration scripts.
 
-## Permission Model (v1 — demo phase)
-- Open RLS policies allow all reads and writes without login (intentional for demo).
-- No sensitive client financial data in production until lock-down sprint is complete.
-
-## Permission Model (post lock-down sprint)
-- Every insert sets `user_id = auth.uid()`.
-- RLS policies: `using (auth.uid() = user_id)` on all tables.
-- Agents and server actions inherit the authenticated user's Supabase session — they cannot exceed what that user can read or write.
+## Permission Model
+- **v1 (demo):** Open RLS policies — any visitor can read and write. Acceptable because no real client data lives here yet.
+- **Lock-down sprint:** Replace all policies with `auth.uid() = user_id`. Every insert stamps `user_id = auth.uid()`. Users see only their own firm's data.
+- Agent actions inherit the session user's permissions — no privilege escalation.
 
 ## Approved Tools Rule
-- Only named functions (`generate_reminder_message`, `update_request_status`, `create_document_request`) are callable. No raw `run_any` or `exec_sql` exposed to any agent or UI action.
+- Only named, scoped tools are called: `generate_reminder_message`, `copy_to_clipboard`, `update_document_status`.
+- No `run_any` / `eval` / `send_any` patterns allowed.
+- Reminder message generation reads data only — it never writes or sends without explicit user action.
 
 ## Audit Principle
-- Every status change, creation, and deletion writes a row to `activity_logs`.
-- Logs are append-only (no update/delete policy on activity_logs post lock-down).
-- If a security concern arises around auth, payments, or data-loss risk: stop and involve a qualified human before proceeding.
+- Every status change, client deletion, and reminder generation writes a row to `audit_logs`.
+- Logs are append-only (no update/delete policy on `audit_logs`).
+- Until auth is live, `actor_user_id` is null — acceptable for internal demo phase only.
+
+## Data-Loss Risk
+- Client delete is the only destructive action. It must show a confirmation modal naming the client and stating how many document requests will be removed.
+- If in doubt about security or RLS correctness before real client data is loaded: stop and get a human to review.

@@ -1,41 +1,38 @@
 # Intelligence Layer
 
-## Messy Input
-Accountants type free-form lists of missing documents ("Bank stmts Oct-Dec, FA schedule, directors loan agmt"). Deadlines are entered manually. Status is updated ad-hoc.
+## Messy Inputs
+- Staff describe missing documents inconsistently ("Jan bank stmt", "bank statements for Jan", "January bank")
+- Deadlines typed in various formats
+- Status sometimes left at default even after documents arrive
 
-## Auto-Structured Schema (reminder message output)
+## Auto-Structure (v1 — rule-based)
+Reminder message template (deterministic, no AI):
 ```json
 {
-  "client_name": "Bumi Jaya Sdn Bhd",
-  "contact_name": "Mr Hafiz",
+  "client_name": "Maple Trading Pte Ltd",
+  "service_type": "Accounting & GST",
   "missing_documents": [
-    "Bank statements (Oct–Dec 2023)",
-    "Fixed asset schedule",
-    "Directors' loan agreement"
+    "Bank statements Jan–Dec 2024",
+    "Sales invoices Q4 2024"
   ],
-  "deadline": "31 July 2024",
-  "generated_message": "Dear Mr Hafiz, ...polite body...",
-  "source": "template",
-  "confidence": 1.0,
-  "review_status": "unreviewed"
+  "deadline": "15 Feb 2025",
+  "generated_message": "Dear Maple Trading Pte Ltd,\n\nThis is a friendly reminder that we are still awaiting the following documents for your Accounting & GST filing:\n\n• Bank statements Jan–Dec 2024\n• Sales invoices Q4 2024\n\nKindly send these to us by 15 Feb 2025.\n\nThank you for your cooperation."
 }
 ```
 
 ## Events to Track
-- Request created
-- Status changed (old → new)
+- Document request created
+- Status changed (from → to, timestamp, who)
 - Reminder message generated
-- Deadline changed
-- Days overdue (computed at query time)
+- Deadline passed with status still open
 
-## Scoring Rules (rule-based, v1)
-- **Urgency score** = days until deadline (lower = more urgent); negative = overdue
-- **Staleness score** = days since last status change
-- Dashboard `ORDER BY deadline ASC NULLS LAST` implements urgency ranking without AI
+## Urgency Scoring (rule-based, v1)
+- Overdue: deadline < today AND status not Completed → score 3 (red)
+- Due ≤ 7 days: score 2 (amber)
+- Due > 7 days: score 1 (normal)
+- Dashboard sorts by score desc, then deadline asc.
 
-## What Gets Ranked
-Document requests on the dashboard, ranked by deadline. Overdue rows surface first with a red badge.
-
-## v1 vs Later
-- **v1:** Deterministic template-based message generation; rule-based deadline sort.
-- **Later:** AI rewrites the reminder message for tone/language; suggests follow-up date based on client reply patterns; flags clients that are consistently late.
+## Later (not v1)
+- AI-drafted message tone variation (formal / friendly)
+- Auto-suggest document names based on service type
+- Confidence scoring on AI-drafted messages stored in `message_text_confidence`

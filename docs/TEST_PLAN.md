@@ -1,34 +1,29 @@
 # Test Plan
 
-## Core Success Scenario (manual)
-1. Open app at `/` — dashboard loads with seeded demo clients. No login required.
-2. Click "Add Client" — fill in Name: "ABC Sdn Bhd", Contact: "Ms Wong", FYE: "31 Dec", Service: "Tax", PIC: "David Tan". Submit.
-3. **Pass:** "ABC Sdn Bhd" appears in the client list. Hard refresh — still there.
-4. Click "Add Document Request" for ABC Sdn Bhd — enter Missing Documents: "Form C 2023\nCP204 instalment schedule", Deadline: next Friday, Status: "Pending".
-5. **Pass:** Request appears on dashboard at correct deadline-sorted position.
-6. Click "Generate Reminder" — modal appears with message including "ABC Sdn Bhd", both missing documents, and the deadline.
-7. Click "Copy" — button shows "Copied!". Paste into a text editor — message is complete and correct.
-8. **Pass:** `reminder_message` field in Supabase now contains the generated text.
-9. Change status to "Waiting for Client" from dashboard dropdown.
-10. **Pass:** Badge updates immediately; activity_logs gains a new row with action = 'status_changed'.
+## Success Scenario (manual, end-to-end)
+
+1. Open app at `/` (no login). **Pass:** Dashboard loads with seeded demo clients sorted by deadline. **Fail:** Login wall, blank page, or JS error.
+2. Click "Add Client". Fill in name = "Test Corp Pte Ltd", FYE = 31 Dec 2024, service type = "Accounting & GST", PIC = "Sarah Tan". Submit. **Pass:** Client appears on dashboard. **Fail:** Form submits but client not visible; refresh loses it.
+3. Click into "Test Corp Pte Ltd". Click "Add Document Request". Fill document name = "Bank statements 2024", deadline = next Friday, status = "Pending". Submit. **Pass:** Document appears in list. **Fail:** Document missing after submit or refresh.
+4. Add a second document request: "Sales invoices Q4 2024", same deadline, status = "Pending". **Pass:** Both documents listed.
+5. Change first document status to "Partially Received" via dropdown. **Pass:** Badge updates immediately. Refresh — still shows "Partially Received". **Fail:** Reverts to Pending on refresh.
+6. Click "Generate Reminder". **Pass:** Textarea shows message containing "Test Corp Pte Ltd", "Bank statements 2024", "Sales invoices Q4 2024", and the deadline date. **Fail:** Any of those missing.
+7. Click "Copy to Clipboard". **Pass:** "Copied!" confirmation shown; pasting elsewhere yields full message text. **Fail:** Button does nothing or copies empty string.
+8. Return to dashboard. **Pass:** "Test Corp Pte Ltd" appears with urgency badge and correct open document count. **Fail:** Client missing or count wrong.
 
 ## Empty State Tests
-- Delete all document requests → dashboard shows "No open document requests. Add a client to get started."
-- No clients → client list shows "No clients yet — add your first one."
+- Dashboard with no clients: shows "No clients yet — add your first one" with Add Client CTA.
+- Client detail with no document requests: shows "No documents requested yet — add the first one".
+- Filtered view with no matches: shows "No clients match these filters — clear filters to see all".
 
 ## Error State Tests
-- Submit Add Client with blank Name → form shows validation error, no insert fires.
-- Simulate Supabase offline (disable network) → dashboard shows error banner "Could not load requests. Please check your connection."
-- Simulate failed status update → status badge reverts, error toast shown.
+- Submit Add Client form with empty name: inline validation error, no DB call.
+- Submit Add Document Request with no document name: inline error, no DB call.
+- Simulate network failure on status update: show toast "Failed to update status — please try again"; revert dropdown to previous value.
+- Delete client: confirm modal shows client name and count of document requests to be removed. Cancel leaves data intact. Confirm removes client and all requests.
 
-## Overdue Highlighting Test
-- Edit a document request deadline to yesterday, status = "Pending".
-- **Pass:** Row appears with red highlight on dashboard.
-
-## Reminder Message Content Test
-- Generated message must contain: client name, each missing document on its own line, deadline formatted as "DD Month YYYY", and at least one polite sentence.
-- **Fail condition:** Any of those four elements is missing from the output.
-
-## Data Persistence Test
-- Add a client and a request. Clear browser cache and hard reload (`Ctrl+Shift+R`).
-- **Pass:** Both rows still present — data comes from Supabase, not local storage.
+## Deadline Urgency Tests
+- Document with deadline yesterday and status Pending: red badge, sorted to top.
+- Document with deadline in 5 days: amber badge.
+- Document with deadline in 30 days: no urgency badge.
+- Document with status Completed: excluded from missing documents list and reminder message.

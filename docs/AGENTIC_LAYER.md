@@ -2,30 +2,34 @@
 
 ## Risk Levels & Actions
 
-### Low Risk — Auto-execute
-- Generate reminder message text from template (no send, just draft)
-- Compute overdue status and urgency score
-- Auto-suggest follow-up date = deadline minus 7 days
+### Low Risk — Auto (no approval needed)
+- Generate reminder message text from template → `generate_reminder_message(client_id)` — produces draft text only, does not send
+- Compute urgency score for each open document request → displayed on dashboard
+- Auto-suggest status change to "Completed" when all document requests for a client are marked Received
 
-### Medium Risk — Show result, one-click confirm
-- Update document request status (e.g. Pending → Waiting for Client)
-- Create a new document request pre-filled from a recurring template
+### Medium Risk — Light Approval
+- Bulk-update status for all documents of a client (e.g. mark all Received) → user confirms before commit
+- Mark a document request as Completed → single confirm step
 
-### High Risk — Explicit approval required
-- Send reminder message via external channel (not v1; would require user to confirm content + recipient before any dispatch)
+### High Risk — Always Approval (v1: not built, noted for later)
+- Sending the reminder message via email or WhatsApp API → must be explicitly triggered, logged, rate-limited
 
-### Critical — Human only
-- Delete a client and all associated requests
-- Bulk-delete or bulk-complete requests
+### Critical — Human Only
+- Delete a client and all their document requests → confirmation modal + plain-language warning about data loss
+- Bulk delete → not available in v1
 
 ## Named Tools (v1)
-- `generate_reminder_message(request_id)` — reads client + request, renders template, writes to `reminder_message` field
-- `update_request_status(request_id, new_status)` — validates status enum, writes, logs to activity_logs
-- `create_document_request(client_id, fields)` — inserts row, logs creation
+- `generate_reminder_message` — reads client + open document_requests, renders template string
+- `copy_to_clipboard` — browser clipboard API only, no external call
+- `update_document_status` — single-row update to `document_requests.status`
 
-## Audit Log Fields
-Every meaningful action writes to `activity_logs`: `entity_type`, `entity_id`, `action`, `old_value`, `new_value`, `actor_label`, `created_at`.
+## Audit Log Fields (on every meaningful action)
+- `action_type` (e.g. `status_updated`, `reminder_generated`, `client_deleted`)
+- `entity_type` + `entity_id`
+- `actor_user_id` (nullable in v1)
+- `before_value`, `after_value`
+- `created_at`
 
-## v1 vs Later
-- **v1:** All three named tools above, all medium-risk or lower.
-- **Later:** WhatsApp/email dispatch tool (high risk, always approval gate before firing).
+## Later
+- WhatsApp Business API send (high risk, gated)
+- Scheduled follow-up reminder nudges
